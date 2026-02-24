@@ -592,7 +592,7 @@ def update_shelf_icon():
         print(f"Could not auto-update icon: {e}")
 
 # Run it immediately
-update_shelf_icon()
+#update_shelf_icon()
 
 def main():
     # Clean up old windows
@@ -611,4 +611,4 @@ def main():
         # If failed/cancelled, delete the python object so it doesn't linger
         my_tool.deleteLater()
 
-main()
+#main()
