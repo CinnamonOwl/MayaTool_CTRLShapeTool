@@ -1,0 +1,62 @@
+// 1. A dummy procedure just so we can ask Maya where this file is located
+global proc CTRLShapeTool_LocatorProc() {}
+
+// 2. The actual installer
+global proc CTRLShapeTool_Install() {
+    global string $gShelfTopLevel;
+
+    // Magically find the folder this script is in!
+    string $whatIs = `whatIs CTRLShapeTool_LocatorProc`;
+    string $fullPath = substitute("Mel procedure found in: ", $whatIs, "");
+    string $dir = dirname($fullPath);
+    $dir = substituteAllString($dir, "\\", "/");
+
+    // Exact match to your Python filename
+    string $scriptName = "MayaTool_CTRLShapeTool_v011"; 
+    string $iconName   = "ControlShapeTool_icon.png";
+    string $fullIconPath = ($dir + "/" + $iconName);
+
+    // Build the Python command
+    string $pyCmd = "import sys\n";
+    $pyCmd += "tool_path = r'" + $dir + "'\n";
+    $pyCmd += "if tool_path not in sys.path:\n";
+    $pyCmd += "    sys.path.insert(0, tool_path)\n";
+    $pyCmd += "if '" + $scriptName + "' in sys.modules:\n";
+    $pyCmd += "    del sys.modules['" + $scriptName + "']\n";
+    $pyCmd += "import " + $scriptName + "\n";
+    $pyCmd += $scriptName + ".main()"; 
+
+    if (`tabLayout -exists $gShelfTopLevel`) {
+        string $currentShelf = `tabLayout -q -selectTab $gShelfTopLevel`;
+        
+        // Prevent duplicates
+        string $buttons[] = `shelfLayout -q -childArray $currentShelf`;
+        if (size($buttons) > 0) {
+            for ($btn in $buttons) {
+                if (`shelfButton -exists $btn`) {
+                    string $cmd = `shelfButton -q -command $btn`;
+                    if (`gmatch $cmd ("*" + $scriptName + "*")`) {
+                        deleteUI $btn;
+                    }
+                }
+            }
+        }
+
+        // Create the Button
+        shelfButton
+            -parent $currentShelf
+            -image $fullIconPath
+            -command $pyCmd
+            -sourceType "python"
+            -annotation ("Launch " + $scriptName)
+            -label "CtrlShapeTool"
+            -overlayLabelColor 1 1 1
+            -overlayLabelBackColor 0 0 0 0.5;
+
+        print("\nSuccessfully installed " + $scriptName + " to shelf: " + $currentShelf + "\n");
+        confirmDialog -title "Installed" -message "Tool installed successfully to your current shelf!" -button "Awesome!";
+    }
+}
+
+// 3. This line automatically runs the installer when the file is dropped into Maya
+CTRLShapeTool_Install();
