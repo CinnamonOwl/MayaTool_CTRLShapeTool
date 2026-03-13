@@ -7,12 +7,15 @@ import os
 import json
 import subprocess
 
+import maya.OpenMayaUI as omui
+from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
+
 try:
     from PySide6 import QtWidgets, QtCore, QtGui
+    from shiboken6 import wrapInstance
 except ImportError:
     from PySide2 import QtWidgets, QtCore, QtGui
-
-from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
+    from shiboken2 import wrapInstance
 
 # -------------------------------------------------------------------------
 # SHARED STYLESHEET
@@ -125,76 +128,78 @@ QPushButton:pressed {
     background-color: #1e1e28;
 }
 
-/* === STORE — Blue === */
+/* === STORE — Blue #76acce === */
 QPushButton#storeButton {
-    background-color: #1e2a3a;
-    border: 1px solid #4a7aaa;
+    background-color: #1c2c38;
+    border: 1px solid #4a7a9a;
     border-radius: 4px;
-    color: #88b8e8;
+    color: #76acce;
     font-weight: bold;
     min-height: 35px;
 }
 QPushButton#storeButton:hover {
-    background-color: #263650;
-    border: 1px solid #66b3ff;
-    color: #aad4ff;
+    background-color: #243850;
+    border: 1px solid #76acce;
+    color: #a0c8e8;
 }
 QPushButton#storeButton:pressed {
     background-color: #141e28;
 }
 
-/* === CREATE — Purple === */
+/* === CREATE — Purple #a885d6 === */
 QPushButton#createButton {
     background-color: #26203a;
-    border: 1px solid #5a4080;
+    border: 1px solid #7a5aaa;
     border-radius: 4px;
-    color: #9a78c8;
+    color: #a885d6;
     font-weight: bold;
     min-height: 35px;
 }
 QPushButton#createButton:hover {
-    background-color: #322850;
-    border: 1px solid #bf80ff;
-    color: #c0a0e8;
+    background-color: #322a50;
+    border: 1px solid #a885d6;
+    color: #c4a8e8;
 }
 QPushButton#createButton:pressed {
-    background-color: #1a1428;
+    background-color: #1a1430;
 }
 
-/* === CHANGE SELECTED — Pink === */
+/* === CHANGE SELECTED — Pink #9c61a1 === */
 QPushButton#changeButton {
-    background-color: #32203a;
-    border: 1px solid #703870;
+    background-color: #2e1e34;
+    border: 1px solid #7a4880;
     border-radius: 4px;
-    color: #b070b0;
+    color: #9c61a1;
     font-weight: bold;
     min-height: 35px;
 }
 QPushButton#changeButton:hover {
-    background-color: #422850;
-    border: 1px solid #ff99ff;
-    color: #d898d8;
+    background-color: #3c2648;
+    border: 1px solid #9c61a1;
+    color: #c088c8;
 }
 QPushButton#changeButton:pressed {
-    background-color: #221428;
+    background-color: #1e1228;
 }
 
-/* === SAVE TO JSON — Mint === */
+/* === SAVE TO JSON — Green #7baf8a === */
 QPushButton#saveButton {
-    background-color: #1a2e26;
-    border: 1px solid #386050;
+    background-color: #1e2e24;
+    border: 1px solid #508060;
     border-radius: 4px;
-    color: #60a880;
+    color: #7baf8a;
     font-weight: bold;
-    min-height: 35px;
+    min-height: 22px;
+    padding: 3px 10px;
+    font-size: 11px;
 }
 QPushButton#saveButton:hover {
-    background-color: #223e32;
-    border: 1px solid #99ffcc;
-    color: #88d4aa;
+    background-color: #263c2e;
+    border: 1px solid #7baf8a;
+    color: #a0c8aa;
 }
 QPushButton#saveButton:pressed {
-    background-color: #101e18;
+    background-color: #141e18;
 }
 
 /* === TOGGLE / SETTINGS (small utility buttons) === */
@@ -264,6 +269,14 @@ QToolButton:hover {
     color: #e0e0f0;
 }
 """
+
+# -------------------------------------------------------------------------
+# HELPERS
+# -------------------------------------------------------------------------
+def get_maya_main_window():
+    main_window_ptr = omui.MQtUtil.mainWindow()
+    return wrapInstance(int(main_window_ptr), QtWidgets.QWidget)
+
 
 # -------------------------------------------------------------------------
 # SECTION FRAME HELPER  (mirrors the Renamer's make_section)
@@ -410,7 +423,19 @@ class ControlShapeTool(MayaQWidgetDockableMixin, QtWidgets.QWidget):
 
     # ------------------------------------------------------------------
     def setup_ui(self):
-        self.main_layout = QtWidgets.QVBoxLayout(self)
+        # Outer layout sits on self (may show Maya grey at edges when docked)
+        outer_layout = QtWidgets.QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+
+        # Inner container owns the theme — this is what the stylesheet colors
+        self._container = QtWidgets.QWidget()
+        self._container.setObjectName("themedContainer")
+        self._container.setStyleSheet("QWidget#themedContainer { background-color: #1e1e24; }")
+        self._container.setAutoFillBackground(True)
+        outer_layout.addWidget(self._container)
+
+        self.main_layout = QtWidgets.QVBoxLayout(self._container)
         self.main_layout.setContentsMargins(10, 10, 10, 10)
         self.main_layout.setSpacing(8)
 
@@ -438,26 +463,28 @@ class ControlShapeTool(MayaQWidgetDockableMixin, QtWidgets.QWidget):
         self.chk_autofit = QtWidgets.QCheckBox("Auto-Fit (Uniform Scaling)")
         self.chk_autofit.setChecked(True)
 
-        self.btn_save = QtWidgets.QPushButton("SAVE SELECTION TO JSON")
-        self.btn_save.setObjectName("saveButton")
-        self.btn_save.clicked.connect(self.save_logic)
-
         actions_inner.addWidget(self.btn_store)
         actions_inner.addWidget(self.btn_create)
         actions_inner.addWidget(self.btn_change)
         actions_inner.addWidget(self.chk_autofit)
-        actions_inner.addWidget(self.btn_save)
 
         # ── LIBRARY ────────────────────────────────────
         lib_inner = make_section("Saved JSON Library", self.main_layout)
 
-        # Header row inside section
+        # Header row: Save button on the left, Switch to Grid on the right
         header_row = QtWidgets.QHBoxLayout()
+
+        self.btn_save = QtWidgets.QPushButton("Save to JSON")
+        self.btn_save.setObjectName("saveButton")
+        self.btn_save.clicked.connect(self.save_logic)
+        header_row.addWidget(self.btn_save)
+
+        header_row.addStretch()
+
         self.view_toggle_btn = QtWidgets.QPushButton("Switch to Grid")
         self.view_toggle_btn.setObjectName("utilButton")
         self.view_toggle_btn.setFixedWidth(110)
         self.view_toggle_btn.clicked.connect(self.toggle_view_mode)
-        header_row.addStretch()
         header_row.addWidget(self.view_toggle_btn)
         lib_inner.addLayout(header_row)
 
