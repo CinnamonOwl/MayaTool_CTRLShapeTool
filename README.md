@@ -2,7 +2,10 @@ Install Instructions:
 
 - Download the folder and put it in your desired location. 
 - Find file "dragAndDrop.mel" and drag and drop it into your Maya viewport. 
-- Yay! You've installed it! Now, set a Library for yourself in your desired location. 
+- Yay! You've installed it! Now, set a Library for yourself in your desired location.
+
+
+Change Logs:
 
 2026/03/13 
 
